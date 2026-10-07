@@ -178,6 +178,70 @@
       display: inline-block;
     }
 
+    /* 实时时间卡片 —— 全新添加 */
+    .live-time-item {
+      background: rgba(12, 35, 80, 0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 3rem;
+      padding: 0.9rem 2rem;
+      border: 1px solid rgba(130, 200, 255, 0.8);
+      box-shadow: 0 0 25px rgba(70, 150, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.2rem;
+      transition: box-shadow 0.3s, background 0.3s;
+      animation: timeGlow 3s infinite alternate;
+    }
+
+    .live-time-item:hover {
+      background: rgba(25, 65, 130, 0.8);
+      box-shadow: 0 0 35px rgba(120, 190, 255, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+    }
+
+    @keyframes timeGlow {
+      0% { border-color: rgba(130, 200, 255, 0.5); box-shadow: 0 0 20px rgba(70, 150, 255, 0.3); }
+      100% { border-color: rgba(200, 230, 255, 0.95); box-shadow: 0 0 35px rgba(120, 190, 255, 0.8); }
+    }
+
+    .live-time-label {
+      font-weight: 500;
+      font-size: 1.1rem;
+      color: #c9e2ff;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+    }
+
+    .live-time-label::before {
+      content: "🕒";
+      font-size: 1.2rem;
+      opacity: 1;
+      color: #9ac7ff;
+      text-shadow: 0 0 8px #6aa9ff;
+      margin-right: 0.2rem;
+    }
+
+    .live-time-value {
+      font-family: 'Courier New', 'Fira Code', monospace;
+      font-weight: 700;
+      font-size: 1.4rem;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #ffffff, #c6e2ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 18px rgba(100, 180, 255, 0.9);
+      padding: 0.1rem 0.5rem;
+      border-radius: 2rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
     /* 欢迎语区域 */
     .welcome-section {
       margin-top: 1.5rem;
@@ -237,6 +301,15 @@
       .qq-number {
         font-size: 1.2rem;
       }
+      .live-time-item {
+        padding: 0.7rem 1rem;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+      .live-time-value {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+      }
       .welcome-text {
         font-size: 1.6rem;
         letter-spacing: 2px;
@@ -265,6 +338,12 @@
 
     <!-- 信息列表 -->
     <div class="info-block">
+      <!-- 实时时间 (新增) -->
+      <div class="info-item live-time-item">
+        <span class="live-time-label">实时时间</span>
+        <span class="live-time-value" id="liveTimeDisplay">加载中…</span>
+      </div>
+
       <!-- 主页链接：B站短链，点击跳转 -->
       <div class="info-item">
         <span class="info-label">主页</span>
@@ -296,5 +375,70 @@
       </div>
     </div>
   </main>
+
+  <script>
+    (function() {
+      // 获取显示时间的元素
+      const timeDisplay = document.getElementById('liveTimeDisplay');
+
+      // 格式化日期和时间，补零
+      function formatNumber(num) {
+        return num < 10 ? '0' + num : num;
+      }
+
+      // 更新实时时间
+      function updateLiveTime() {
+        const now = new Date();
+
+        const year = now.getFullYear();
+        const month = formatNumber(now.getMonth() + 1); // 月份从0开始
+        const day = formatNumber(now.getDate());
+        const hours = formatNumber(now.getHours());
+        const minutes = formatNumber(now.getMinutes());
+        const seconds = formatNumber(now.getSeconds());
+
+        // 格式：2025/03/21 14:05:09  (清晰易读)
+        const timeString = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+
+        if (timeDisplay) {
+          timeDisplay.textContent = timeString;
+        }
+      }
+
+      // 立即执行一次，避免显示"加载中…"
+      updateLiveTime();
+
+      // 每秒钟更新一次 (使用 setInterval 保证精确)
+      let intervalId = setInterval(updateLiveTime, 1000);
+
+      // 可选：页面可见性优化，当页面不可见时暂停刷新（省电，但非必须，保留亦可）
+      // 这里为了简单不做复杂处理，但也可以优雅降级：如果页面隐藏时清除定时器，可见时恢复。
+      // 考虑到用户体验的连续性，保留每秒更新即可。但加一个可见性优化会显得更专业。
+      // 下面加入 visibilitychange 监听（可选，不影响功能）
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+          // 页面隐藏时清除定时器，节省资源
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+        } else {
+          // 页面可见时立即刷新并重新设定定时器
+          updateLiveTime();
+          if (!intervalId) {
+            intervalId = setInterval(updateLiveTime, 1000);
+          }
+        }
+      });
+
+      // 清理定时器（理论上单页应用不需要，但加上无妨）
+      window.addEventListener('beforeunload', function() {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      });
+    })();
+  </script>
 </body>
-    </html>
+  </html>
